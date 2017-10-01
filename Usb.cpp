@@ -16,6 +16,7 @@ e-mail   :  support@circuitsathome.com
  */
 /* USB functions */
 
+//#define DEBUG_USB_PRINTING
 #include "Usb.h"
 
 static uint8_t usb_error = 0;
@@ -132,12 +133,28 @@ uint8_t USB::ctrlReq(uint8_t addr, uint8_t ep, uint8_t bmReqType, uint8_t bReque
         EpInfo *pep = NULL;
         uint16_t nak_limit = 0;
 
+        DEBUG_USB_PRINTLN("USB::ctrlReq SetAddress");
+
         rcode = SetAddress(addr, ep, &pep, &nak_limit);
 
         if(rcode)
                 return rcode;
 
         direction = ((bmReqType & 0x80) > 0);
+
+        DEBUG_USB_PRINTLN("USB::ctrlReq setup_pkt");
+        DEBUG_USB_PRINT("USB::ctrlReq ReqType=0x");
+        DEBUG_USB_PRINT_HEXLN(bmReqType);
+        DEBUG_USB_PRINT("USB::ctrlReq bRequest=0x");
+        DEBUG_USB_PRINT_HEXLN(bRequest);
+        DEBUG_USB_PRINT("USB::ctrlReq wValLo=0x");
+        DEBUG_USB_PRINT_HEXLN(wValLo);
+        DEBUG_USB_PRINT("USB::ctrlReq wValHi=0x");
+        DEBUG_USB_PRINT_HEXLN(wValHi);
+        DEBUG_USB_PRINT("USB::ctrlReq wIndex=0x");
+        DEBUG_USB_PRINT_HEXLN(wInd);
+        DEBUG_USB_PRINT("USB::ctrlReq wLength=0x");
+        DEBUG_USB_PRINT_HEXLN(total);
 
         /* fill in setup packet */
         setup_pkt.ReqType_u.bmRequestType = bmReqType;
@@ -149,6 +166,7 @@ uint8_t USB::ctrlReq(uint8_t addr, uint8_t ep, uint8_t bmReqType, uint8_t bReque
 
         bytesWr(rSUDFIFO, 8, (uint8_t*) & setup_pkt); //transfer to setup packet FIFO
 
+        DEBUG_USB_PRINTLN("USB::ctrlReq dispatchPkt");
         rcode = dispatchPkt(tokSETUP, ep, nak_limit); //dispatch packet
 
         if(rcode) //return HRSLT if not zero
@@ -156,8 +174,11 @@ uint8_t USB::ctrlReq(uint8_t addr, uint8_t ep, uint8_t bmReqType, uint8_t bReque
 
         if(dataptr != NULL) //data stage, if present
         {
+                DEBUG_USB_PRINTLN("USB::ctrlReq data state");
+
                 if(direction) //IN transfer
                 {
+                        DEBUG_USB_PRINTLN("USB::ctrlReq IN transfer");
                         uint16_t left = total;
 
                         pep->bmRcvToggle = 1; //bmRCVTOG1;
@@ -188,12 +209,15 @@ uint8_t USB::ctrlReq(uint8_t addr, uint8_t ep, uint8_t bmReqType, uint8_t bReque
                         }
                 } else //OUT transfer
                 {
+                        DEBUG_USB_PRINTLN("USB::ctrlReq OUT transfer");
                         pep->bmSndToggle = 1; //bmSNDTOG1;
                         rcode = OutTransfer(pep, nak_limit, nbytes, dataptr);
                 }
                 if(rcode) //return error
                         return ( rcode);
         }
+
+        DEBUG_USB_PRINTLN("USB::ctrlReq dispatchPkt status");
         // Status stage
         return dispatchPkt((direction) ? tokOUTHS : tokINHS, ep, nak_limit); //GET if direction
 }
@@ -510,10 +534,16 @@ void USB::Task(void) //USB state machine
                         //Serial.print("\r\nConf.LS: ");
                         //Serial.println(lowspeed, HEX);
 
+                        DEBUG_USB_PRINT("Conf.lowspeed: 0x");
+                        DEBUG_USB_PRINT_HEXLN(lowspeed);
+
                         rcode = Configuring(0, 0, lowspeed);
 
                         if(rcode) {
                                 if(rcode != USB_DEV_CONFIG_ERROR_DEVICE_INIT_INCOMPLETE) {
+                                        DEBUG_USB_PRINT("Error from device: 0x");
+                                        DEBUG_USB_PRINT_HEXLN(rcode);
+
                                         usb_error = rcode;
                                         usb_task_state = USB_STATE_ERROR;
                                 }
@@ -653,6 +683,11 @@ again:
 uint8_t USB::Configuring(uint8_t parent, uint8_t port, bool lowspeed) {
         //uint8_t bAddress = 0;
         //printf("Configuring: parent = %i, port = %i\r\n", parent, port);
+        DEBUG_USB_PRINT("USB::Configuring: parent=0x");
+        DEBUG_USB_PRINT_HEX(parent);
+        DEBUG_USB_PRINT(", port=0x");
+        DEBUG_USB_PRINT_HEXLN(port);
+
         uint8_t devConfigIndex;
         uint8_t rcode = 0;
         uint8_t buf[sizeof (USB_DEVICE_DESCRIPTOR)];
@@ -685,8 +720,14 @@ uint8_t USB::Configuring(uint8_t parent, uint8_t port, bool lowspeed) {
         p->epinfo = &epInfo;
 
         p->lowspeed = lowspeed;
+
+        DEBUG_USB_PRINTLN("USB::Configuring: Get device descriptor");
+
         // Get device descriptor
         rcode = getDevDescr(0, 0, sizeof (USB_DEVICE_DESCRIPTOR), (uint8_t*)buf);
+
+        DEBUG_USB_PRINT("rcode=0x");
+        DEBUG_USB_PRINT_HEXLN(rcode);
 
         // Restore p->epinfo
         p->epinfo = oldep_ptr;
@@ -704,6 +745,9 @@ uint8_t USB::Configuring(uint8_t parent, uint8_t port, bool lowspeed) {
         uint16_t pid = udd->idProduct;
         uint8_t klass = udd->bDeviceClass;
         uint8_t subklass = udd->bDeviceSubClass;
+
+        DEBUG_USB_PRINTLN("USB::Configuring: AttemptConfig");
+
         // Attempt to configure if VID/PID or device class matches with a driver
         // Qualify with subclass too.
         //
@@ -725,6 +769,8 @@ uint8_t USB::Configuring(uint8_t parent, uint8_t port, bool lowspeed) {
         }
 
 
+        DEBUG_USB_PRINTLN("USB::Configuring: Configure blindly");
+
         // blindly attempt to configure
         for(devConfigIndex = 0; devConfigIndex < USB_NUMDEVICES; devConfigIndex++) {
                 if(!devConfig[devConfigIndex]) continue;
@@ -742,9 +788,12 @@ uint8_t USB::Configuring(uint8_t parent, uint8_t port, bool lowspeed) {
                         return rcode;
                 }
         }
+        DEBUG_USB_PRINTLN("USB::Configuring: DefaultAddressing");
+
         // if we get here that means that the device class is not supported by any of registered classes
         rcode = DefaultAddressing(parent, port, lowspeed);
 
+        DEBUG_USB_PRINTLN("USB::Configuring: return at end");
         return rcode;
 }
 
