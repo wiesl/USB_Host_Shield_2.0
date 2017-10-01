@@ -27,6 +27,16 @@ e-mail   :  support@circuitsathome.com
 #include <sys/types.h>
 #endif
 
+#ifdef DEBUG_USB_PRINTING
+#define DEBUG_USB_PRINT(s)    do { Serial.print(s); Serial.send_now(); } while( false )
+#define DEBUG_USB_PRINTLN(s)    do { Serial.println(s); Serial.send_now(); } while( false )
+#define DEBUG_USB_PRINT_HEX(hex)    do { Serial.print(hex, HEX); Serial.send_now(); } while( false )
+#else
+#define DEBUG_USB_PRINT(s)        /* Don't do anything in release builds */
+#define DEBUG_USB_PRINTLN(hex)  /* Don't do anything in release builds */
+#define DEBUG_USB_PRINT_HEX(hex)  /* Don't do anything in release builds */
+#endif
+
 /* SPI initialization */
 template< typename SPI_CLK, typename SPI_MOSI, typename SPI_MISO, typename SPI_SS > class SPi {
 public:
@@ -408,6 +418,16 @@ int8_t MAX3421e< SPI_SS, INTR >::Init() {
         spi::init();
         INTR::SetDirRead();
         XMEM_RELEASE_SPI();
+
+        unsigned int revision = regRd(rREVISION);
+        DEBUG_USB_PRINT("Chip revision 0x");
+        DEBUG_USB_PRINT_HEX(revision);
+        DEBUG_USB_PRINTLN("");
+
+        if (revision != 0x13) {
+                return ( -1);
+        }
+
         /* MAX3421E - full-duplex SPI, level interrupt */
         // GPX pin on. Moved here, otherwise we flicker the vbus.
         regWr(rPINCTL, (bmFDUPSPI | bmINTLEVEL));
@@ -422,9 +442,12 @@ int8_t MAX3421e< SPI_SS, INTR >::Init() {
 
         /* check if device is connected */
         regWr(rHCTL, bmSAMPLEBUS); // sample USB bus
+        DEBUG_USB_PRINTLN("Sample USB bus");
         while(!(regRd(rHCTL) & bmSAMPLEBUS)); //wait for sample operation to finish
 
+        DEBUG_USB_PRINTLN("Busprobe ...");
         busprobe(); //check if anything is connected
+        DEBUG_USB_PRINTLN("Busprobe completed");
 
         regWr(rHIRQ, bmCONDETIRQ); //clear connection detect interrupt
         regWr(rCPUCTL, 0x01); //enable interrupt pin
@@ -445,6 +468,16 @@ int8_t MAX3421e< SPI_SS, INTR >::Init(int mseconds) {
         spi::init();
         INTR::SetDirRead();
         XMEM_RELEASE_SPI();
+
+        unsigned int revision = regRd(rREVISION);
+        DEBUG_USB_PRINT("Chip revision 0x");
+        DEBUG_USB_PRINT_HEX(revision);
+        DEBUG_USB_PRINTLN("");
+
+        if (revision != 0x13) {
+                return ( -1);
+        }
+
         /* MAX3421E - full-duplex SPI, level interrupt, vbus off */
         regWr(rPINCTL, (bmFDUPSPI | bmINTLEVEL | GPX_VBDET));
 
@@ -463,9 +496,12 @@ int8_t MAX3421e< SPI_SS, INTR >::Init(int mseconds) {
 
         /* check if device is connected */
         regWr(rHCTL, bmSAMPLEBUS); // sample USB bus
+        DEBUG_USB_PRINTLN("Sample USB bus");
         while(!(regRd(rHCTL) & bmSAMPLEBUS)); //wait for sample operation to finish
 
+        DEBUG_USB_PRINTLN("Busprobe ...");
         busprobe(); //check if anything is connected
+        DEBUG_USB_PRINTLN("Busprobe completed");
 
         regWr(rHIRQ, bmCONDETIRQ); //clear connection detect interrupt
         regWr(rCPUCTL, 0x01); //enable interrupt pin
