@@ -131,7 +131,7 @@ FailGetDevDescr:
         return rcode;
 };
 
-uint8_t BTD::Init(uint8_t parent, uint8_t port, bool lowspeed) {
+uint8_t BTD::Init(uint8_t parent __attribute__((unused)), uint8_t port __attribute__((unused)), bool lowspeed) {
         uint8_t rcode;
         uint8_t num_of_conf = epInfo[1].epAddr; // Number of configurations
         epInfo[1].epAddr = 0;
@@ -225,11 +225,11 @@ uint8_t BTD::Init(uint8_t parent, uint8_t port, bool lowspeed) {
                 // First interface in the configuration must have Bluetooth assigned Class/Subclass/Protocol
                 // And 3 endpoints - interrupt-IN, bulk-IN, bulk-OUT, not necessarily in this order
                 for(uint8_t i = 0; i < num_of_conf; i++) {
-                        if(VID == IOGEAR_GBU521_VID && PID == IOGEAR_GBU521_PID) {
-                                ConfigDescParser<USB_CLASS_VENDOR_SPECIFIC, WI_SUBCLASS_RF, WI_PROTOCOL_BT, CP_MASK_COMPARE_ALL> confDescrParser(this); // Needed for the IOGEAR GBU521
+                        if((VID == IOGEAR_GBU521_VID && PID == IOGEAR_GBU521_PID) || (VID == BELKIN_F8T065BF_VID && PID == BELKIN_F8T065BF_PID)) {
+                                ConfigDescParser<USB_CLASS_VENDOR_SPECIFIC, WI_SUBCLASS_RF, WI_PROTOCOL_BT, CP_MASK_COMPARE_ALL> confDescrParser(this); // Workaround issue with some dongles
                                 rcode = pUsb->getConfDescr(bAddress, 0, i, &confDescrParser);
                         } else {
-                                ConfigDescParser<USB_CLASS_WIRELESS_CTRL, WI_SUBCLASS_RF, WI_PROTOCOL_BT, CP_MASK_COMPARE_ALL> confDescrParser(this);
+                                ConfigDescParser<USB_CLASS_WIRELESS_CTRL, WI_SUBCLASS_RF, WI_PROTOCOL_BT, CP_MASK_COMPARE_ALL> confDescrParser(this); // Set class id according to the specification
                                 rcode = pUsb->getConfDescr(bAddress, 0, i, &confDescrParser);
                         }
                         if(rcode) // Check error code
@@ -324,7 +324,7 @@ void BTD::Initialize() {
 }
 
 /* Extracts interrupt-IN, bulk-IN, bulk-OUT endpoint information from config descriptor */
-void BTD::EndpointXtract(uint8_t conf, uint8_t iface, uint8_t alt, uint8_t proto, const USB_ENDPOINT_DESCRIPTOR *pep) {
+void BTD::EndpointXtract(uint8_t conf, uint8_t iface __attribute__((unused)), uint8_t alt, uint8_t proto __attribute__((unused)), const USB_ENDPOINT_DESCRIPTOR *pep) {
         //ErrorMessage<uint8_t>(PSTR("Conf.Val"),conf);
         //ErrorMessage<uint8_t>(PSTR("Iface Num"),iface);
         //ErrorMessage<uint8_t>(PSTR("Alt.Set"),alt);
@@ -354,7 +354,7 @@ void BTD::EndpointXtract(uint8_t conf, uint8_t iface, uint8_t alt, uint8_t proto
         bNumEP++;
 }
 
-void BTD::PrintEndpointDescriptor(const USB_ENDPOINT_DESCRIPTOR* ep_ptr) {
+void BTD::PrintEndpointDescriptor(const USB_ENDPOINT_DESCRIPTOR* ep_ptr __attribute__((unused))) {
 #ifdef EXTRADEBUG
         Notify(PSTR("\r\nEndpoint descriptor:"), 0x80);
         Notify(PSTR("\r\nLength:\t\t"), 0x80);

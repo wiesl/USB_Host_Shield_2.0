@@ -20,29 +20,25 @@ Contact information
 Circuits At Home, LTD
 Web      :  http://www.circuitsathome.com
 e-mail   :  support@circuitsathome.com
+
+UHS2_GPIO implements "wiring" style GPIO access. Implemented by Brian Walton brian@riban.co.uk
  */
-/* USB functions */
-#ifndef _usb_h_
-#define _usb_h_
 
-// WARNING: Do not change the order of includes, or stuff will break!
-#include <inttypes.h>
-#include <stddef.h>
-#include <stdio.h>
+#if !defined(__USB2_GPIO_H__)
+#define __USB2_GPIO_H__
 
-// None of these should ever be included by a driver, or a user's sketch.
-#include "settings.h"
-#include "printhex.h"
-#include "message.h"
-#include "hexdump.h"
-#include "sink_parser.h"
-#include "max3421e.h"
-#include "address.h"
-#include "avrpins.h"
-#include "usb_ch9.h"
-#include "usbhost.h"
-#include "UsbCore.h"
-#include "parsetools.h"
-#include "confdescparser.h"
+#include "Usb.h"
 
-#endif //_usb_h_
+class UHS2_GPIO {
+public:
+        UHS2_GPIO(USB *pUsb);
+
+        void digitalWrite(uint8_t pin, uint8_t val);
+        int digitalRead(uint8_t pin);
+        int digitalReadOutput(uint8_t pin);
+
+private:
+        USB* m_pUsb;
+};
+
+#endif // __USB2_GPIO_H__

@@ -95,7 +95,7 @@ For more information visit the following sites: <http://arduino.cc/en/Guide/Libr
 
 ### Documentation
 
-Documentation for the library can be found at the following link: <http://felis.github.com/USB_Host_Shield_2.0/>.
+Documentation for the library can be found at the following link: <https://felis.github.io/USB_Host_Shield_2.0/>.
 
 ### Enable debugging
 
@@ -128,6 +128,8 @@ Currently the following boards are supported by the library:
     * Also please be aware that:
       * GPIO16 is **NOT** usable, as it will be used for some other purposes. For example, reset the SoC itself from sleep mode.
       * GPIO6 to 11 is also **NOT** usable, as they are used to connect SPI flash chip and it is used for storing the executable binary content.
+* ESP32 is supported using the [arduino-esp32](https://github.com/espressif/arduino-esp32/)
+    * GPIO5 : SS, GPIO17 : INT, GPIO18 : SCK, GPIO19 : MISO, GPIO23 : MOSI
 
 The following boards need to be activated manually in [settings.h](settings.h):
 
@@ -188,6 +190,8 @@ It should then automatically pair the dongle with your controller. This only hav
 For information see the following blog post: <http://blog.tkjelectronics.dk/2014/01/ps4-controller-now-supported-by-the-usb-host-library/>.
 
 Also check out this excellent Wiki by Frank Zhao about the PS4 controller: <http://eleccelerator.com/wiki/index.php?title=DualShock_4> and this Linux driver: <https://github.com/chrippa/ds4drv>.
+
+Several guides on how to use the PS4 library has been written by Dr. James E. Barger and are available at the following link: <https://sites.google.com/view/vbatc-engineeringtechnology2/control-system-tutorials/ps4-tutorials>.
 
 ### PS3 Library
 
